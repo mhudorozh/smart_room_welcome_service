@@ -8,20 +8,21 @@ import uuid
 import webbrowser
 import time
 
+NS = "http://cs.karelia.ru/smartroom_welcome_service#"
+
 
 class PageViewer:
     def __init__(self, node):
         self.node = node
 
     def handle(self, added, removed):
-        #webbrowser.open(url=url, autoraise=True)
+        print "Added:"
         print added
+        print "Removed: "
         print removed
 
 
 class SIBAdapter(KP):
-    NS = "http://cs.karelia.ru/smartroom_welcome_service#"
-
     def __init__(self, server_ip, server_port):
         KP.__init__(self, str(uuid.uuid4()) + "DesktopClient")
         self.ss_handle = ("X", (TCPConnector, (server_ip, server_port)))
@@ -38,12 +39,8 @@ class SIBAdapter(KP):
         print initial_results
 
     def create_map_page_subscription(self):
-        trip = [Triple(URI(self.NS + "MapPage_1"), URI(self.NS + "hasContent"), None)]
+        trip = [Triple(URI(NS + "MapPage_1"), URI(NS + "hasContent"), None)]
         sibAdapter.create_subscription(trip, PageViewer(self))
-
-    def wait_for_page_change(self):
-        time.sleep(5)
-        return 'https://yandex.ru'
 
 
 if __name__ == "__main__":

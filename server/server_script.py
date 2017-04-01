@@ -7,6 +7,9 @@ from smart_m3.m3_kp import *
 from smart_m3.RDFTransactionList import *
 import uuid
 
+NS = "http://cs.karelia.ru/smartroom_welcome_service#"
+access_token = 'AIzaSyAy8MoPJH-uh72zsxdnPqWbSyKCLq7jc_U'
+map_api_url = 'https://maps.googleapis.com/maps/api/geocode/json?address={}&key={}'
 
 class User:
     def __init__(self, uuid, name, city):
@@ -40,15 +43,13 @@ class Page:
 
 
 class GeoDecoder:
-    access_token = 'AIzaSyAy8MoPJH-uh72zsxdnPqWbSyKCLq7jc_U'
-    map_api_url = 'https://maps.googleapis.com/maps/api/geocode/json?address={}&key={}'
 
     def __init__(self):
         pass
 
     @staticmethod
     def find_location(address):
-        response = urllib.urlopen(GeoDecoder.map_api_url.format(address, GeoDecoder.access_token)).read()
+        response = urllib.urlopen(map_api_url.format(address, access_token)).read()
         j = json.loads(response)
         long_name = j["results"][0]["address_components"][0]["long_name"]
         location = j["results"][0]["geometry"]["location"]
@@ -56,19 +57,9 @@ class GeoDecoder:
 
 
 class SIBAdapter(KP):
-    NS = "http://cs.karelia.ru/smartroom_welcome_service#"
-
     def __init__(self, server_ip, server_port):
         KP.__init__(self, str(uuid.uuid4()) + "Server")
         self.ss_handle = ("X", (TCPConnector, (server_ip, server_port)))
-
-        self.mapPage = self.NS + "MapPage_1"
-        self.welcomePage = self.NS + "WelcomePage_"
-        self.hasContent = self.NS + "hasContent"
-        self.hasName = self.NS + "hasName"
-        self.userClass = self.NS + "User"
-        self.mapPageClass = self.NS + "MapPage"
-        self.welcomePageClass = self.NS + "WelcomePage"
 
     def join_sib(self):
         self.join(self.ss_handle)
@@ -82,36 +73,24 @@ class SIBAdapter(KP):
         self.CloseUpdateTransaction(upd)
 
     def register_ontology(self):
-        t = RDFTransactionList()
-
-        t.add_Class(self.userClass)
-        t.add_Class(self.mapPageClass)
-        t.add_Class(self.welcomePageClass)
-
         l = self.CreateInsertTransaction(self.ss_handle)
-        l.send(t.get())
+        l.send('ontology/ontology.owl', encoding="RDF-XML")
         self.CloseInsertTransaction(l)
 
     def save_map_page(self, page):
-        print 'saving page...'
-        print page.name
-        print page.content
-
         t = RDFTransactionList()
 
-        t.setType(self.mapPage, self.mapPageClass)
-        t.add_literal(self.mapPage, self.hasContent, page.content)
-        t.add_literal(self.mapPage, self.hasName, page.name)
+        t.setType(NS + "MapPage_1", NS + "MapPage")
+        t.add_literal(NS + "MapPage_1", NS + "hasContent", page.content)
+        t.add_literal(NS + "MapPage_1", NS + "hasName", page.name)
 
         l = self.CreateInsertTransaction(self.ss_handle)
         l.send(t.get())
         self.CloseInsertTransaction(l)
 
-        print '...done'
-
     def update_map_page(self, i_page, r_page):
-        i_trip = [Triple(URI(self.mapPage), URI(self.hasContent), Literal(i_page.content))]
-        r_trip = [Triple(URI(self.mapPage), URI(self.hasContent), Literal(r_page.content))]
+        i_trip = [Triple(URI(NS + "MapPage_1"), URI(NS + "hasContent"), Literal(i_page.content))]
+        r_trip = [Triple(URI(NS + "MapPage_1"), URI(NS + "hasContent"), Literal(r_page.content))]
         self.update(i_trip, r_trip)
 
 
