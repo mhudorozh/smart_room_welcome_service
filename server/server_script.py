@@ -3,6 +3,10 @@
 import urllib
 import json
 
+from smart_m3.m3_kp import *
+from smart_m3.RDFTransactionList import *
+import uuid
+
 
 class User:
     def __init__(self, uuid, name, city):
@@ -51,23 +55,64 @@ class GeoDecoder:
         return {"long_name": long_name, "lat": location["lat"], "lng": location["lng"]}
 
 
-class SIBAdapter:
-    def __init__(self):
-        pass
+class SIBAdapter(KP):
+    NS = "http://cs.karelia.ru/smartroom_welcome_service#"
 
-    def connect_sib(self):
-        print 'connecting sib...'
-        print '...done'
+    def __init__(self, server_ip, server_port):
+        KP.__init__(self, str(uuid.uuid4()) + "Server")
+        self.ss_handle = ("X", (TCPConnector, (server_ip, server_port)))
+
+        self.mapPage = self.NS + "MapPage_1"
+        self.welcomePage = self.NS + "WelcomePage_"
+        self.hasContent = self.NS + "hasContent"
+        self.hasName = self.NS + "hasName"
+        self.userClass = self.NS + "User"
+        self.mapPageClass = self.NS + "MapPage"
+        self.welcomePageClass = self.NS + "WelcomePage"
+
+    def join_sib(self):
+        self.join(self.ss_handle)
+
+    def leave_sib(self):
+        self.leave(self.ss_handle)
+
+    def update(self, i_trip, r_trip):
+        upd = self.CreateUpdateTransaction(self.ss_handle)
+        upd.update(i_trip, "RDF-M3", r_trip, "RDF-M3")
+        self.CloseUpdateTransaction(upd)
 
     def register_ontology(self):
-        print 'register adapter...'
-        print '...done'
+        t = RDFTransactionList()
 
-    def save_page(self, page):
+        t.add_Class(self.userClass)
+        t.add_Class(self.mapPageClass)
+        t.add_Class(self.welcomePageClass)
+
+        l = self.CreateInsertTransaction(self.ss_handle)
+        l.send(t.get())
+        self.CloseInsertTransaction(l)
+
+    def save_map_page(self, page):
         print 'saving page...'
         print page.name
         print page.content
+
+        t = RDFTransactionList()
+
+        t.setType(self.mapPage, self.mapPageClass)
+        t.add_literal(self.mapPage, self.hasContent, page.content)
+        t.add_literal(self.mapPage, self.hasName, page.name)
+
+        l = self.CreateInsertTransaction(self.ss_handle)
+        l.send(t.get())
+        self.CloseInsertTransaction(l)
+
         print '...done'
+
+    def update_map_page(self, i_page, r_page):
+        i_trip = [Triple(URI(self.mapPage), URI(self.hasContent), Literal(i_page.content))]
+        r_trip = [Triple(URI(self.mapPage), URI(self.hasContent), Literal(r_page.content))]
+        self.update(i_trip, r_trip)
 
 
 class PageBuilder:
@@ -103,10 +148,11 @@ class WelcomeBuilder(PageBuilder):
 class Server:
     def __init__(self):
         self.users = []
-        self.sib_adapter = SIBAdapter()
-        self.sib_adapter.connect_sib()
+        self.map_page = MapBuilder.build(self.users)
+        self.sib_adapter = SIBAdapter("127.0.0.1", 10010)
+        self.sib_adapter.join_sib()
         self.sib_adapter.register_ontology()
-        self.sib_adapter.save_page(MapBuilder.build(self.users))
+        self.sib_adapter.save_map_page(self.map_page)
 
     def register_user(self, uuid, name, short_city):
         for user in self.users:
@@ -114,9 +160,19 @@ class Server:
                 print 'Error: request register user twice'
         user = User(uuid, name, GeoDecoder.find_location(short_city))
         self.users.append(user)
-        self.sib_adapter.save_page(MapBuilder.build(self.users))
-        self.sib_adapter.save_page(WelcomeBuilder.build(user))
+
+        # updating map page
+        updated_map_page = MapBuilder.build(self.users)
+        self.sib_adapter.update_map_page(updated_map_page, self.map_page)
+        self.map_page = updated_map_page
+
 
 if __name__ == "__main__":
     server = Server()
-    server.register_user(1, 'gdhsnlvr', 'Petrozavodsk')
+
+    id = 1
+    while True:
+        name = raw_input('\nType your name: ')
+        city = raw_input('\nType your city: ')
+        server.register_user(id, name, city)
+        id += 1
