@@ -1,4 +1,7 @@
-<?xml version="1.0"?>
+<!DOCTYPE rdf:RDF [
+   <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+]>
+
 <rdf:RDF xmlns="http://cs.karelia.ru/smartroom_welcome_service#"
      xml:base="http://cs.karelia.ru/smartroom_welcome_service"
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
