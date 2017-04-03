@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Сервис приветсвия</string>
+
+    <string name="menu_text">Меню</string>
+    <string name="register_button_text">Регистрация</string>
+    <string name="welcome_button_text">Приветствие</string>
+
+    <string name="register_text">Регистрация</string>
+    <string name="prompt_name">Имя</string>
+    <string name="prompt_surname">Фамилия</string>
+    <string name="prompt_patronymic">Отчество</string>
+    <string name="prompt_city">Город</string>
+    <string name="register_accept_button_text">Ок</string>
+    <string name="register_cancel_button_text">Отмена</string>
+
+</resources>
