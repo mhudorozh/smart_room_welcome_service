@@ -1,16 +1,20 @@
 <resources>
-    <string name="app_name">Сервис приветсвия</string>
+    <string name="app_name">Welcome Service</string>
 
-    <string name="menu_text">Меню</string>
-    <string name="register_button_text">Регистрация</string>
-    <string name="welcome_button_text">Приветствие</string>
+    <string name="menu_text">Menu</string>
+    <string name="register_button_text">Registration</string>
+    <string name="welcome_button_text">Welcome</string>
 
-    <string name="register_text">Регистрация</string>
-    <string name="prompt_name">Имя</string>
-    <string name="prompt_surname">Фамилия</string>
-    <string name="prompt_patronymic">Отчество</string>
-    <string name="prompt_city">Город</string>
-    <string name="register_accept_button_text">Ок</string>
-    <string name="register_cancel_button_text">Отмена</string>
+    <string name="register_text">Registration</string>
+    <string name="prompt_name">Name</string>
+    <string name="prompt_surname">Surname</string>
+    <string name="prompt_patronymic">Patronymic</string>
+    <string name="prompt_city">City</string>
+    <string name="register_accept_button_text">OK</string>
+    <string name="register_cancel_button_text">Cancel</string>
+
+    <string name="welcome_text">Welcome</string>
+    <string name="not_registered_yet">You have not registered yet</string>
+    <string name="welcome_template">Welcome, USER_NAME, from CITY_NAME</string>
 
 </resources>
