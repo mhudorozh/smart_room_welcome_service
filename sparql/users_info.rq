@@ -1,0 +1,8 @@
+PREFIX t: <http://cs.karelia.ru/smartroom_welcome_service#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+
+SELECT ?s ?type ?atr ?value WHERE {
+    ?s ?type t:User.
+    ?s ?atr ?value
+}

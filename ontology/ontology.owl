@@ -1,7 +1,4 @@
-<!DOCTYPE rdf:RDF [
-   <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
-]>
-
+<?xml version="1.0"?>
 <rdf:RDF xmlns="http://cs.karelia.ru/smartroom_welcome_service#"
      xml:base="http://cs.karelia.ru/smartroom_welcome_service"
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -66,6 +63,14 @@
     
 
 
+    <!-- http://cs.karelia.ru/smartroom_welcome_service#hasStatus -->
+
+    <owl:DatatypeProperty rdf:about="http://cs.karelia.ru/smartroom_welcome_service#hasStatus">
+        <rdfs:domain rdf:resource="http://cs.karelia.ru/smartroom_welcome_service#User"/>
+    </owl:DatatypeProperty>
+    
+
+
     <!-- http://cs.karelia.ru/smartroom_welcome_service#hasSurname -->
 
     <owl:DatatypeProperty rdf:about="http://cs.karelia.ru/smartroom_welcome_service#hasSurname">
@@ -110,6 +115,26 @@
     <owl:Class rdf:about="http://cs.karelia.ru/smartroom_welcome_service#UserPage">
         <rdfs:subClassOf rdf:resource="http://cs.karelia.ru/smartroom_welcome_service#Page"/>
     </owl:Class>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://cs.karelia.ru/smartroom_welcome_service#user123123adasdsad -->
+
+    <owl:NamedIndividual rdf:about="http://cs.karelia.ru/smartroom_welcome_service#user123123adasdsad">
+        <rdf:type rdf:resource="http://cs.karelia.ru/smartroom_welcome_service#User"/>
+        <hasId rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">12323123</hasId>
+    </owl:NamedIndividual>
 </rdf:RDF>
 
 

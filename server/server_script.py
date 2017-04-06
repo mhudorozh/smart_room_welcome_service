@@ -11,6 +11,7 @@ NS = "http://cs.karelia.ru/smartroom_welcome_service#"
 access_token = 'AIzaSyAy8MoPJH-uh72zsxdnPqWbSyKCLq7jc_U'
 map_api_url = 'https://maps.googleapis.com/maps/api/geocode/json?address={}&key={}'
 
+
 class User:
     def __init__(self, uuid, name, city):
         self.uuid = uuid
@@ -43,7 +44,6 @@ class Page:
 
 
 class GeoDecoder:
-
     def __init__(self):
         pass
 
@@ -74,8 +74,16 @@ class SIBAdapter(KP):
 
     def register_ontology(self):
         l = self.CreateInsertTransaction(self.ss_handle)
-        l.send('ontology/ontology.owl', encoding="RDF-XML")
+        l.send('../ontology/ontology.owl', encoding="RDF-XML")
         self.CloseInsertTransaction(l)
+
+    def sparql_query(self, sparql):
+        print sparql
+        qt = self.CreateQueryTransaction(self.ss_handle)
+        results = qt.sparql_query(sparql)
+        self.CloseQueryTransaction(qt)
+
+        return results
 
     def save_map_page(self, page):
         t = RDFTransactionList()
@@ -83,6 +91,21 @@ class SIBAdapter(KP):
         t.setType(NS + "MapPage_1", NS + "MapPage")
         t.add_literal(NS + "MapPage_1", NS + "hasContent", page.content)
         t.add_literal(NS + "MapPage_1", NS + "hasName", page.name)
+
+        l = self.CreateInsertTransaction(self.ss_handle)
+        l.send(t.get())
+        self.CloseInsertTransaction(l)
+
+    def save_user(self, name):
+        t = RDFTransactionList()
+
+        user_id = str(uuid.uuid4())
+        user_uri = NS + "user" + user_id
+        print user_uri
+        t.setType(user_uri, NS + "User")
+        t.add_literal(user_uri, NS + "hasId", user_id)
+        t.add_literal(user_uri, NS + "hasStatus", "pending")
+        t.add_literal(user_uri, NS + "hasName", name)
 
         l = self.CreateInsertTransaction(self.ss_handle)
         l.send(t.get())
@@ -139,6 +162,7 @@ class Server:
                 print 'Error: request register user twice'
         user = User(uuid, name, GeoDecoder.find_location(short_city))
         self.users.append(user)
+        self.sib_adapter.save_user(name)
 
         # updating map page
         updated_map_page = MapBuilder.build(self.users)
@@ -148,10 +172,14 @@ class Server:
 
 if __name__ == "__main__":
     server = Server()
+    query = ("SELECT ?s ?p ?o WHERE {\n"
+             "  ?s ?p ?o.\n"
+             "  FILTER(?p = t:hasId)\n"
+             "}")
 
-    id = 1
-    while True:
-        name = raw_input('\nType your name: ')
-        city = raw_input('\nType your city: ')
-        server.register_user(id, name, city)
-        id += 1
+    with open('../sparql/users_id.rq') as f:
+        for res in server.sib_adapter.sparql_query(f.read()):
+            print res
+    with open('../sparql/users_info.rq') as f:
+        for res in server.sib_adapter.sparql_query(f.read()):
+            print res
