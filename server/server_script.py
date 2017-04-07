@@ -212,15 +212,23 @@ class SIBAdapter(KP):
 
         :return: list of instances of class User
         """
+        # Dictionary with key - user_uri in sib, value - instance of class User
         users = dict()
+
+        # Getting all users id with users uri
         with open(config.get("sparql", "dir") + "users_id.rq") as f:
+            # rdf triples (user_uri, hasId, user_id)
             rdf_triples = self.sparql_query(f.read())
             for triple in rdf_triples:
+                # for each user id create empty instance of class User
                 users[triple[0][2]] = User("", "", "", "", "", "")
 
+        # Getting users info in rdf triples
         with open(config.get("sparql", "dir") + "users_info.rq") as f:
+            # rdf triples (user_uri, type, attribute, value)
             rdf_triples = self.sparql_query(f.read())
             for triple in rdf_triples:
+                # for each triple save attribute value to instance of class User
                 if triple[2][2] == self.ns + "hasId":
                     users[triple[0][2]].uuid = triple[3][2]
                 if triple[2][2] == self.ns + "hasName":
@@ -233,6 +241,7 @@ class SIBAdapter(KP):
                     users[triple[0][2]].city['long_name'] = triple[3][2]
                 if triple[2][2] == self.ns + "hasStatus":
                     users[triple[0][2]].status = triple[3][2]
+            # return list of users
             return users.values()
 
 
@@ -267,7 +276,7 @@ class WelcomeBuilder:
         :return: welcome page for user
         """
         page = Page("welcome_page#" + str(user.uuid), "", WelcomeBuilder.type)
-        # TODO: build map page
+        # TODO: build welcome page
 
         return page
 
