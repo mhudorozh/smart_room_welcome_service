@@ -35,7 +35,7 @@ class User:
         :param city_name: city name user came from
         :param status: status of registration request
         """
-        self.uuid = uuid
+        self.uuid = str(uuid)
         self.name = name
         self.surname = surname
         self.patronymic = patronymic
@@ -64,14 +64,16 @@ class User:
 class Page:
     """Class of web page"""
 
-    def __init__(self, name, content, type):
+    def __init__(self, name, id, content, type):
         """Constructor of page
 
         :param name: name of page
         :param content: html/css/js content of page
+        :param id: unique id of page
         :param type: rdf type of page
         """
         self.name = name
+        self.id = id
         self.content = content
         self.type = type
 
@@ -83,6 +85,7 @@ class Page:
         return str(
             {
                 "name": self.name,
+                "id": self.id,
                 "content": self.content,
                 "type": self.type
             }
@@ -172,6 +175,7 @@ class SIBAdapter(KP):
 
         t.setType(self.ns + page.name, self.ns + page.type)
         t.add_literal(self.ns + page.name, self.ns + "hasName", page.name)
+        t.add_literal(self.ns + page.id, self.ns + "hasId", page.id)
         t.add_literal(self.ns + page.name, self.ns + "hasContent", page.content)
 
         l = self.CreateInsertTransaction(self.ss_handle)
@@ -230,7 +234,7 @@ class MapBuilder:
         :param users: users for whom the page is building
         :return: map page with cities of users
         """
-        page = Page("map_page", "", MapBuilder.type)
+        page = Page("map_page", "1", "", MapBuilder.type)
         # TODO: build map page
 
         return page
@@ -248,7 +252,7 @@ class WelcomeBuilder:
         :param user: user for whom the page is building
         :return: welcome page for user
         """
-        page = Page("welcome_page#" + str(user.uuid), "", WelcomeBuilder.type)
+        page = Page("welcome_page#" + user.uuid, user.uuid, "", WelcomeBuilder.type)
         # TODO: build map page
 
         return page
