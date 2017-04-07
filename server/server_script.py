@@ -109,6 +109,48 @@ def find_location(city_name):
     return {"long_name": long_name, "lat": location["lat"], "lng": location["lng"]}
 
 
+class UserSubscriber:
+    """Class receiver of the event about registering a new user"""
+
+    def __init__(self, adapter, server):
+        """Constructor
+        
+        :param adapter: instance of SIBAdapter joined to smart space 
+        :param server: server to be notified
+        """
+        self.server = server
+        self.adapter = adapter
+
+    def handle(self, added, removed):
+        """This function will be called when sib adapter catch event about new user
+        
+        :param added: rdf triple with user uri 
+        :param removed: nothing, because we subscribing only on addition user, not removing, but still needed
+            for correct prototype of called function from sib adapter
+        :return: 
+        """
+        # Getting all users from SIB
+        all_users = self.adapter.get_users()
+
+        # Getting all processed users
+        processed_users = self.server.users
+
+        # Finding difference in O(n*m)
+        new_users = []
+        for user in all_users:
+            was = False
+            # Check is user has already been processed before
+            for processed_user in processed_users:
+                was |= processed_user.uuid == user.uuid
+            # If not then add it to list of new users
+            if not was:
+                new_users.append(user)
+
+        # If there is at most one new user, handling this new users
+        if len(new_users) > 0:
+            self.server.handle_new_users(new_users)
+
+
 class SIBAdapter(KP):
     """Class providing high-level methods for getting queries and communication with SIB. """
 
@@ -141,6 +183,15 @@ class SIBAdapter(KP):
         upd = self.CreateUpdateTransaction(self.ss_handle)
         upd.update(i_trip, "RDF-M3", r_trip, "RDF-M3")
         self.CloseUpdateTransaction(upd)
+
+    def create_subscription(self, trip, handler):
+        """Adapter function for creating subscription to rdf triple
+        
+        :param trip: rdf triple handler subscribe for
+        :param handler: handler of triple's update event
+        """
+        self.st = self.CreateSubscribeTransaction(self.ss_handle)
+        self.st.subscribe_rdf(trip, handler)
 
     def register_ontology(self, ontology_file_path, ontology_encoding="RDF-XML"):
         """Adapter function for loading project ontology to SIB
@@ -244,6 +295,15 @@ class SIBAdapter(KP):
             # return list of users
             return users.values()
 
+    def create_user_subscription(self, handler):
+        """Function for subscribing class handler to new user event
+        
+        :param handler: object that will be notified about new user event 
+        """
+        # None means any user
+        trip = [Triple(None, URI("rdf:type"), URI(self.ns + "User"))]
+        self.create_subscription(trip, handler)
+
 
 class MapBuilder:
     """Static class for building map page"""
@@ -298,6 +358,8 @@ class Server:
         self.sib_adapter.register_ontology(config.get("ontology", "file"),
                                            config.get("ontology", "encoding"))
 
+        self.sib_adapter.create_user_subscription(UserSubscriber(self.sib_adapter, self))
+
         # Saving map page with no registered users
         self.map_page = MapBuilder.build(self.users)
         self.sib_adapter.save_page(self.map_page)
@@ -305,7 +367,7 @@ class Server:
     def handle_new_users(self, new_users):
         """Function for handling new users
 
-        :param users: list of new users to process server
+        :param new_users: list of new users to process server
         """
         # Finding location for each user
         for user in new_users:
@@ -356,5 +418,3 @@ class Server:
 
 if __name__ == "__main__":
     server = Server()
-    for user in server.sib_adapter.get_users():
-        print user
