@@ -25,21 +25,21 @@ class Status:
 class User:
     """Class of user profile"""
 
-    def __init__(self, uuid, name, surname, patronymic, city, status):
+    def __init__(self, uuid, name, surname, patronymic, city_name, status):
         """Constructor of user
 
         :param uuid: unique identification of user
         :param name: name of user
         :param surname: surname of user
         :param patronymic: patronymic of user
-        :param city: city user came from
+        :param city_name: city name user came from
         :param status: status of registration request
         """
         self.uuid = uuid
         self.name = name
         self.surname = surname
         self.patronymic = patronymic
-        self.city = city
+        self.city = {"long_name": city_name, "lat": 0, "lng": 0}
         self.status = status
 
     def __str__(self):
@@ -94,11 +94,15 @@ def find_location(city_name):
 
     :param city_name: name of city, errors are permissible
     :return: dictionary with fields 'long_name' - correct name of city, 'lat' - latitude, 'lng' - longitude
+    :raise AttributeError: if location of city didn't found
+    :raise IOError: if no internet connection
     """
-    request_rul = config.get("location_api", "api_url").format(city_name, config.get("location_api", "access_token"))
-
+    request_rul = config.get("location_api", "url").format(city_name, config.get("location_api", "token"))
     response = urllib.urlopen(request_rul).read()
     j = json.loads(response)
+
+    if j["status"] != "OK":
+        raise AttributeError("Can't find location of city")
 
     long_name = j["results"][0]["address_components"][0]["long_name"]
     location = j["results"][0]["geometry"]["location"]
@@ -208,74 +212,121 @@ class SIBAdapter(KP):
 
         :return: list of instances of class User
         """
-        with open(config.get("files", "sparql_query_dir") + "users_id.rq") as f:
+        with open(config.get("sparql", "dir") + "users_id.rq") as f:
             rdf_triples = self.sparql_query(f.read())
             # TODO: write conversation from list of rdf triples to list of instances of class Users
             return []
 
-class PageBuilder:
-    def __init__(self):
-        pass
+
+class MapBuilder:
+    """Static class for building map page"""
+    # Type of building page
+    type = "MapPage"
 
     @staticmethod
     def build(users):
-        return Page("undefined", "")
+        """Static function for building map page
 
+        :param users: users for whom the page is building
+        :return: map page with cities of users
+        """
+        page = Page("map_page", "", MapBuilder.type)
+        # TODO: build map page
 
-class MapBuilder(PageBuilder):
-    @staticmethod
-    def build(users):
-        page = Page("map_page", "")
-        page.content += 'var user_data = ['
-        for user in users:
-            page.content += str(user)
-        page.content += '];'
         return page
 
 
-class WelcomeBuilder(PageBuilder):
+class WelcomeBuilder:
+    """Static class for building welcome page"""
+    # Type of building page
+    type = "WelcomePage"
+
     @staticmethod
     def build(user):
-        page = Page("welcome_page#" + str(user.uuid), "")
-        page.content += 'var user_data = ['
-        page.content += str(user)
-        page.content += '];'
+        """Static function for building welcome page
+
+        :param user: user for whom the page is building
+        :return: welcome page for user
+        """
+        page = Page("welcome_page#" + str(user.uuid), "", WelcomeBuilder.type)
+        # TODO: build map page
+
         return page
 
 
 class Server:
+    """Class server represent main logic module of welcome service. Server processes new user addition event and
+    responds requests """
+
     def __init__(self):
+        """Constructor of server with joining smart space"""
         self.users = []
-        self.map_page = MapBuilder.build(self.users)
-        self.sib_adapter = SIBAdapter("127.0.0.1", 10010)
+
+        # Joining smart space
+        self.sib_adapter = SIBAdapter(config.get("sib", "ip"), config.getint("sib", "port"),
+                                      config.get("sib", "space_name"), config.get("sib", "namespace"))
         self.sib_adapter.join_sib()
-        self.sib_adapter.register_ontology()
-        self.sib_adapter.save_map_page(self.map_page)
 
-    def register_user(self, uuid, name, short_city):
-        for user in self.users:
-            if user.uuid == uuid:
-                print 'Error: request register user twice'
-        user = User(uuid, name, find_location(short_city))
-        self.users.append(user)
-        self.sib_adapter.save_user(name)
+        # Pushing service ontology to SIB
+        self.sib_adapter.register_ontology(config.get("ontology", "file"),
+                                           config.get("ontology", "encoding"))
 
-        # updating map page
-        updated_map_page = MapBuilder.build(self.users)
-        self.sib_adapter.update_map_page(updated_map_page, self.map_page)
-        self.map_page = updated_map_page
+        # Saving map page with no registered users
+        self.map_page = MapBuilder.build(self.users)
+        self.sib_adapter.save_page(self.map_page)
+
+    def handle_new_users(self, new_users):
+        """Function for handling new users
+
+        :param users: list of new users to process server
+        """
+        # Finding location for each user
+        for user in new_users:
+            try:
+                user.city = find_location(user.city["long_name"])
+            except AttributeError:
+                print "Can't find location of city" + user.city["long_name"]
+                user.status = Status.FAILED
+            except IOError:
+                print "Can't connect to internet"
+                user.status = Status.FAILED
+
+        # Extend server processed users
+        self.users.extend(new_users)
+
+        # Updating map page content
+        self.update_map_page(self.users)
+
+        # Building welcome pages for every new user
+        self.create_welcome_pages(new_users)
+
+        # Changing status for each new user
+        for user in new_users:
+            # Status may be FAILED, in this case we can't set status to ready
+            if user.status != Status.FAILED:
+                user.status = Status.READY
+            # Updating user registration status
+            self.sib_adapter.update_user_status(user, user.status, Status.PENDING)
+
+    def update_map_page(self, users):
+        """Build and save map page for users
+
+        :param users: list of users to be placed in map page
+        """
+        map_page = MapBuilder.build(users)
+        self.sib_adapter.update_page_content(self.map_page, self.map_page.content, map_page.content)
+        self.map_page = map_page
+
+    def create_welcome_pages(self, new_users):
+        """Build and save welcome page for each new user
+
+        :param new_users: list of new users
+        """
+        for user in new_users:
+            welcome_page = WelcomeBuilder.build(user)
+            self.sib_adapter.save_page(welcome_page)
 
 
 if __name__ == "__main__":
     server = Server()
-    query = ("SELECT ?s ?p ?o WHERE {\n"
-             "  ?s ?p ?o.\n"
-             "  FILTER(?p = t:hasId)\n"
-             "}")
-
-    with open('../sparql/users_id.rq') as f:
-        for res in server.sib_adapter.sparql_query(f.read()):
-            print res
-    with open('../sparql/users_info.rq') as f:
-        for res in server.sib_adapter.sparql_query(f.read()):
-            print res
+    user = User(123, "Sergey", "Titov", "Alekseevich", "Konchezero", Status.PENDING)
