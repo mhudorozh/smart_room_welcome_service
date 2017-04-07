@@ -212,10 +212,28 @@ class SIBAdapter(KP):
 
         :return: list of instances of class User
         """
+        users = dict()
         with open(config.get("sparql", "dir") + "users_id.rq") as f:
             rdf_triples = self.sparql_query(f.read())
-            # TODO: write conversation from list of rdf triples to list of instances of class Users
-            return []
+            for triple in rdf_triples:
+                users[triple[0][2]] = User("", "", "", "", "", "")
+
+        with open(config.get("sparql", "dir") + "users_info.rq") as f:
+            rdf_triples = self.sparql_query(f.read())
+            for triple in rdf_triples:
+                if triple[2][2] == self.ns + "hasId":
+                    users[triple[0][2]].uuid = triple[3][2]
+                if triple[2][2] == self.ns + "hasName":
+                    users[triple[0][2]].name = triple[3][2]
+                if triple[2][2] == self.ns + "hasSurname":
+                    users[triple[0][2]].surname = triple[3][2]
+                if triple[2][2] == self.ns + "hasPatronymic":
+                    users[triple[0][2]].patronymic = triple[3][2]
+                if triple[2][2] == self.ns + "hasCity":
+                    users[triple[0][2]].city['long_name'] = triple[3][2]
+                if triple[2][2] == self.ns + "hasStatus":
+                    users[triple[0][2]].status = triple[3][2]
+            return users.values()
 
 
 class MapBuilder:
@@ -329,4 +347,5 @@ class Server:
 
 if __name__ == "__main__":
     server = Server()
-    user = User(123, "Sergey", "Titov", "Alekseevich", "Konchezero", Status.PENDING)
+    for user in server.sib_adapter.get_users():
+        print user
