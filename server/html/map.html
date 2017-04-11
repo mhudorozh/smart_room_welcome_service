@@ -2,9 +2,21 @@
 <html>
 	<head>
     	<script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+		<style>
+	        body, html {
+	            padding: 0;
+	            margin: 0;
+	            width: 100%;
+	            height: 100%;
+	        }
+	        #map {
+	            width: 100%;
+	            height: 100%;
+	        }
+		</style>
    </head>
-	<body>
-		<div id="map" style="width: 1400px; height: 1000px"></div>
+	<body >
+		<div id="map"></div>
 		<script type="text/javascript">
 		'use strict';
 		
@@ -16,47 +28,54 @@
 	    	}
 		}
 
-		var Persons = ['Petrov Ilia Olegovich', 'Titov Sergey Alekseevich'];
-		var Persons2 =['Chizhov Ilia Ruslanovich'];
+		var PersonsPetr = ['Petrov Ilia Olegovich', 'Titov Sergey Alekseevich'];
+		var PersonsMosc = ['Yuriy Antonovich Kamnev'];
+		var PersonsLond = ['Hans Johann'];
+		var PersonsPsko = ['Pyshkin Igor Sergeyvich', 'Korotkevich Gennadiy Petrovich', 'Smykov Mikhail Vladimirovich'];
 
-		let Petrozavodsk = new City(61.7849100, 34.3469100, Persons);
-
+		let Petrozavodsk = new City(61.7849100, 34.3469100, PersonsPetr);
+		let Moscow = new City(55.7522200, 37.6155600, PersonsMosc);
+		let London = new City(51.506415, -0.127201, PersonsLond);
+		let Pskov = new City(57.8136000, 28.3496000, PersonsPsko);
+		
 		var cities = {
-			cityName: 'Petrozavodsk',
-			city: Petrozavodsk,
+			'Petrozavodsk': Petrozavodsk,
+			'Moscow': Moscow,
+			'London': London,
+			'Pskov': Pskov,
 		};
+
+		function sizeOfMarker(count){
+			var maxSize = 60;
+			var minSize = 30;
+			return ((maxSize - minSize) * (count * 2)/10 + (maxSize - minSize));
+		}
 
 		ymaps.ready(init);
 
 		function init() {
 	    	var myMap = new ymaps.Map('map', {
 	        	center: [55.753994, 37.622093],
-	        	zoom: 5
+	        	zoom: 4
 	    	});
+	    	for (var i in cities) {
+		    	var myPlacemark = new ymaps.Placemark([cities[i].lat, cities[i].lon], {
+		    		balloonContentHeader: cities[i].persons.length ,
+            		balloonContentBody: cities[i].persons,
+	        	    iconCaption: i,
+	        	   
 
-	    	ymaps.geocode([cities.city.lat, cities.city.lon] , {
-	        /**
-	         * Опции запроса
-	         * @see https://api.yandex.ru/maps/doc/jsapi/2.1/ref/reference/geocode.xml
-	         */
-	        // Сортировка результатов от центра окна карты.
-	        // boundedBy: myMap.getBounds(),
-	        // strictBounds: true,
-	        // Вместе с опцией boundedBy будет искать строго внутри области, указанной в boundedBy.
-	        // Если нужен только один результат, экономим трафик пользователей.
-	        	results: 1
-	    		}).then(function (res) {
-	            // Выбираем первый результат геокодирования.
-	            	var firstGeoObject = res.geoObjects.get(0),
-	                // Координаты геообъекта.
-	                coords = firstGeoObject.geometry.getCoordinates(),
-	                // Область видимости геообъекта.
-	                bounds = firstGeoObject.properties.get('boundedBy');
+	    		}, {
+	        	 	iconLayout: 'default#image',
+	        	 	iconImageHref: 'marker.png',
+	        	 	iconImageSize: [sizeOfMarker(cities[i].persons.length), sizeOfMarker(cities[i].persons.length)],
+	        	 	iconImageOffset: [-sizeOfMarker(cities[i].persons.length)/2, -sizeOfMarker(cities[i].persons.length)]
 
-	            // Добавляем первый найденный геообъект на карту.
-	            	myMap.geoObjects.add(firstGeoObject);
+	    		});
 
-	            });
+		    	  myMap.geoObjects.add(myPlacemark);
+		    }
+
 		}
 		</script>
     </body>
