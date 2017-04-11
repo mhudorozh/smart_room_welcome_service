@@ -4,11 +4,13 @@
 from smart_m3.m3_kp import *
 from smart_m3.RDFTransactionList import *
 import uuid
-
+import ConfigParser
+import os
 import webbrowser
 import time
 
-NS = "http://cs.karelia.ru/smartroom_welcome_service#"
+config = ConfigParser.ConfigParser()
+config.read("config.ini")
 
 
 class PageViewer:
@@ -16,37 +18,70 @@ class PageViewer:
         self.node = node
 
     def handle(self, added, removed):
-        print "Added:"
-        print added
-        print "Removed: "
-        print removed
+        with open('map_page.html', 'w') as f:
+            f.write(str(added[0][2]))
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        page_url = "file:///" + dir_path + "/map_page.html"
+        webbrowser.open(url=page_url, autoraise=True)
 
 
 class SIBAdapter(KP):
-    def __init__(self, server_ip, server_port):
+    """Class providing high-level methods for getting queries and communication with SIB. """
+
+    def __init__(self, ip, port, space_name, ns):
+        """Constructor of SIBAdapter without joining to sib
+
+        :param ip: ip address of SIB
+        :param port: port of SIB
+        :param space_name: name of smart space to join
+        :param ns: namespace of ontology
+        """
         KP.__init__(self, str(uuid.uuid4()) + "DesktopClient")
-        self.ss_handle = ("X", (TCPConnector, (server_ip, server_port)))
+        self.ss_handle = (space_name, (TCPConnector, (ip, port)))
+        self.ns = ns
 
     def join_sib(self):
+        """Adapter function for joining SIB"""
         self.join(self.ss_handle)
 
     def leave_sib(self):
+        """Adapter function for leaving SIB"""
         self.leave(self.ss_handle)
 
     def create_subscription(self, trip, handler):
+        """Adapter function for creating subscription to rdf triple
+
+        :param trip: rdf triple handler subscribe for
+        :param handler: handler of triple's update event
+        """
         self.st = self.CreateSubscribeTransaction(self.ss_handle)
-        initial_results = self.st.subscribe_rdf(trip, handler)
-        print initial_results
+        self.st.subscribe_rdf(trip, handler)
 
-    def create_map_page_subscription(self):
-        trip = [Triple(URI(NS + "MapPage_1"), URI(NS + "hasContent"), None)]
-        sibAdapter.create_subscription(trip, PageViewer(self))
+    def sparql_query(self, sparql):
+        """Adapter function for retrieving the result of sparql query
 
+        :param sparql: code of sparql query
+        :return: array of rdf triples
+        """
+        qt = self.CreateQueryTransaction(self.ss_handle)
+        results = qt.sparql_query(sparql)
+        self.CloseQueryTransaction(qt)
+        return results
+
+    def create_map_page_subscription(self, handler):
+        """Function for subscribing class handler to map page's content change event
+
+        :param handler: object that will be notified about map page's content change
+        """
+        # None means any content
+        trip = [Triple(URI(self.ns + "map_page"), URI(self.ns + "hasContent"), None)]
+        self.create_subscription(trip, handler)
 
 if __name__ == "__main__":
-    sibAdapter = SIBAdapter("127.0.0.1", 10010)
+    sibAdapter = SIBAdapter(config.get("sib", "ip"), config.getint("sib", "port"),
+                            config.get("sib", "space_name"), config.get("sib", "namespace"))
     sibAdapter.join_sib()
-    sibAdapter.create_map_page_subscription()
+    sibAdapter.create_map_page_subscription(PageViewer(sibAdapter))
 
     while True:
         line = raw_input('\nType "exit" to exit the program\n')

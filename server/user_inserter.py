@@ -71,7 +71,7 @@ class SIBAdapter(KP):
         :param space_name: name of smart space to join
         :param ns: namespace of ontology
         """
-        KP.__init__(self, str(uuid.uuid4()) + "Server")
+        KP.__init__(self, str(uuid.uuid4()) + "UserInserter")
         self.ss_handle = (space_name, (TCPConnector, (ip, port)))
         self.ns = ns
 

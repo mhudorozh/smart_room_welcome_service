@@ -132,6 +132,9 @@ class UserSubscriber:
             for correct prototype of called function from sib adapter
         :return: 
         """
+        print 'Got'
+        print added
+
         # Getting all users from SIB
         all_users = self.adapter.get_users()
 
@@ -224,9 +227,11 @@ class SIBAdapter(KP):
         """
         t = RDFTransactionList()
 
+        print 'Saving page ' + self.ns + page.name
+        print 'Content: ' + page.content
         t.setType(self.ns + page.name, self.ns + page.type)
         t.add_literal(self.ns + page.name, self.ns + "hasName", page.name)
-        t.add_literal(self.ns + page.id, self.ns + "hasId", page.id)
+        t.add_literal(self.ns + page.name, self.ns + "hasId", page.id)
         t.add_literal(self.ns + page.name, self.ns + "hasContent", page.content)
 
         l = self.CreateInsertTransaction(self.ss_handle)
@@ -243,6 +248,8 @@ class SIBAdapter(KP):
         :param i_content: page content to insert in SIB
         :param r_content: page content to remove from SIB
         """
+        print 'Updating page ' + self.ns + page.name
+        print 'New content: ' + page.content
         i_trip = [Triple(URI(self.ns + page.name), URI(self.ns + "hasContent"), Literal(i_content))]
         r_trip = [Triple(URI(self.ns + page.name), URI(self.ns + "hasContent"), Literal(r_content))]
         self.update(i_trip, r_trip)
@@ -323,7 +330,8 @@ class MapBuilder:
         """
         page = Page("map_page", "1", "", MapBuilder.type)
         # TODO: build map page
-
+        for user in users:
+            page.content += str(user)
         return page
 
 
@@ -367,6 +375,9 @@ class Server:
         # Saving map page with no registered users
         self.map_page = MapBuilder.build(self.users)
         self.sib_adapter.save_page(self.map_page)
+
+    def close(self):
+        self.sib_adapter.leave_sib()
 
     def handle_new_users(self, new_users):
         """Function for handling new users
@@ -422,3 +433,10 @@ class Server:
 
 if __name__ == "__main__":
     server = Server()
+
+    while True:
+        line = raw_input('\nType "exit" to exit the program\n')
+        if line.lower() == "exit":
+            break
+
+    server.close()
