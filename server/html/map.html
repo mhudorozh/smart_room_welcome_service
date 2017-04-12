@@ -18,65 +18,77 @@
 	<body >
 		<div id="map"></div>
 		<script type="text/javascript">
-		'use strict';
+			'use strict';
+			
+			// class City, variables Latitude of city, Longitude of city, list of personson from city
+		    class City {
+		 	    constructor(lat, lon, persons) {
+		    	this.lat = lat;
+		    	this.lon = lon;
+		    	this.persons = persons;
+		    	}
+			}
+
+			//lists of persons from cities
+			var PersonsPetr = ['Petrov Ilia Olegovich', 'Titov Sergey Alekseevich'];
+			var PersonsMosc = ['Yuriy Antonovich Kamnev'];
+			var PersonsLond = ['Hans Johann'];
+			var PersonsPsko = ['Pyshkin Igor Sergeyvich', 'Korotkevich Gennadiy Petrovich', 'Smykov Mikhail Vladimirovich'];
+
+			let Petrozavodsk = new City(61.7849100, 34.3469100, PersonsPetr);
+			let Moscow = new City(55.7522200, 37.6155600, PersonsMosc);
+			let London = new City(51.506415, -0.127201, PersonsLond);
+			let Pskov = new City(57.8136000, 28.3496000, PersonsPsko);
+			
+			//аssociative array of objects class City
+			var cities = {
+				'Petrozavodsk': Petrozavodsk,
+				'Moscow': Moscow,
+				'London': London,
+				'Pskov': Pskov,
+			};
+
+			//function depends size of the placemark on the number of participants
+			function sizeOfMark(count){
+				var maxSize = 40;
+				var minSize = 10;
+				return ((maxSize - minSize) * (count * 2)/10 + (maxSize - minSize));
+			}
+
+			//then API ready
+			ymaps.ready(init);
+
+			function init() {
+				//init map
+		    	var myMap = new ymaps.Map('map', {
+		    		//center in Moscow
+		        	center: [55.753994, 37.622093],
+		        	zoom: 4
+		    	});
+		    	// for all cities in аssociative array
+		    	for (var i in cities) {
+		    		// add new placemark
+			    	var myPlacemark = new ymaps.Placemark([cities[i].lat, cities[i].lon], {
+			    		//in balloon header count of persons from city
+			    		balloonContentHeader: cities[i].persons.length + " participants from " + i,
+			    		//in balloon body list of persons
+	            		balloonContentBody: cities[i].persons,
 		
-	    class City {
-	 	    constructor(lat, lon, persons) {
-	    	this.lat = lat;
-	    	this.lon = lon;
-	    	this.persons = persons;
-	    	}
-		}
+		    		}, {
+		        	 	iconLayout: 'default#image',
+		        	 	//image of placemark
+		        	 	iconImageHref: 'placemark.png',
+		        	 	//size of placemark
+		        	 	iconImageSize: [sizeOfMark(cities[i].persons.length), sizeOfMark(cities[i].persons.length)],
+		        	 	//offset of placemark
+		        	 	iconImageOffset: [-sizeOfMark(cities[i].persons.length)/2, -sizeOfMark(cities[i].persons.length)/2]
 
-		var PersonsPetr = ['Petrov Ilia Olegovich', 'Titov Sergey Alekseevich'];
-		var PersonsMosc = ['Yuriy Antonovich Kamnev'];
-		var PersonsLond = ['Hans Johann'];
-		var PersonsPsko = ['Pyshkin Igor Sergeyvich', 'Korotkevich Gennadiy Petrovich', 'Smykov Mikhail Vladimirovich'];
+		    		});
+			    		//add placemark on map
+			    		myMap.geoObjects.add(myPlacemark);
+			    }
 
-		let Petrozavodsk = new City(61.7849100, 34.3469100, PersonsPetr);
-		let Moscow = new City(55.7522200, 37.6155600, PersonsMosc);
-		let London = new City(51.506415, -0.127201, PersonsLond);
-		let Pskov = new City(57.8136000, 28.3496000, PersonsPsko);
-		
-		var cities = {
-			'Petrozavodsk': Petrozavodsk,
-			'Moscow': Moscow,
-			'London': London,
-			'Pskov': Pskov,
-		};
-
-		function sizeOfMarker(count){
-			var maxSize = 60;
-			var minSize = 30;
-			return ((maxSize - minSize) * (count * 2)/10 + (maxSize - minSize));
-		}
-
-		ymaps.ready(init);
-
-		function init() {
-	    	var myMap = new ymaps.Map('map', {
-	        	center: [55.753994, 37.622093],
-	        	zoom: 4
-	    	});
-	    	for (var i in cities) {
-		    	var myPlacemark = new ymaps.Placemark([cities[i].lat, cities[i].lon], {
-		    		balloonContentHeader: cities[i].persons.length ,
-            		balloonContentBody: cities[i].persons,
-	        	    iconCaption: i,
-	        	   
-
-	    		}, {
-	        	 	iconLayout: 'default#image',
-	        	 	iconImageHref: 'marker.png',
-	        	 	iconImageSize: [sizeOfMarker(cities[i].persons.length), sizeOfMarker(cities[i].persons.length)],
-	        	 	iconImageOffset: [-sizeOfMarker(cities[i].persons.length)/2, -sizeOfMarker(cities[i].persons.length)]
-
-	    		});
-
-		    	  myMap.geoObjects.add(myPlacemark);
-		    }
-
-		}
+			}
 		</script>
     </body>
 </html>
