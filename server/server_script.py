@@ -132,9 +132,6 @@ class UserSubscriber:
             for correct prototype of called function from sib adapter
         :return: 
         """
-        print 'Got'
-        print added
-
         # Getting all users from SIB
         all_users = self.adapter.get_users()
 
@@ -278,7 +275,7 @@ class SIBAdapter(KP):
         users = dict()
 
         # Getting all users id with users uri
-        with open(config.get("sparql", "dir") + "users_id.rq") as f:
+        with open(config.get("sparql", "users_id_query")) as f:
             # rdf triples (user_uri, hasId, user_id)
             rdf_triples = self.sparql_query(f.read())
             for triple in rdf_triples:
@@ -286,7 +283,7 @@ class SIBAdapter(KP):
                 users[triple[0][2]] = User("", "", "", "", "", "")
 
         # Getting users info in rdf triples
-        with open(config.get("sparql", "dir") + "users_info.rq") as f:
+        with open(config.get("sparql", "users_info_query")) as f:
             # rdf triples (user_uri, type, attribute, value)
             rdf_triples = self.sparql_query(f.read())
             for triple in rdf_triples:
@@ -332,6 +329,7 @@ class MapBuilder:
         # TODO: build map page
         for user in users:
             page.content += str(user)
+        page.content += "\n/* Version: " + str(uuid.uuid4()) + " */"
         return page
 
 
@@ -359,7 +357,6 @@ class Server:
 
     def __init__(self):
         """Constructor of server with joining smart space"""
-        self.users = []
 
         # Joining smart space
         self.sib_adapter = SIBAdapter(config.get("sib", "ip"), config.getint("sib", "port"),
@@ -372,6 +369,8 @@ class Server:
 
         self.sib_adapter.create_user_subscription(UserSubscriber(self.sib_adapter, self))
 
+        # Getting all users registered before server start
+        self.users = self.sib_adapter.get_users()
         # Saving map page with no registered users
         self.map_page = MapBuilder.build(self.users)
         self.sib_adapter.save_page(self.map_page)
