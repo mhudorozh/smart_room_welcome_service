@@ -14,13 +14,28 @@ config.read("config.ini")
 
 
 class PageViewer:
+    """Class receiver of the event about map page's content change"""
+
     def __init__(self, node):
+        """Constructor of PageViewer
+        
+        :param node: sib adapter node joined in smart space
+        """
         self.node = node
 
     def handle(self, added, removed):
+        """This function will be called when sib adapter catch event about map page's content change
+        
+        :param added: rdf triple with new content of page 
+        :param removed: old map page's content, not used, for correct prototype of called function from sib adapter
+        :return: 
+        """
+        # Saving page content to local file
         with open('map_page.html', 'w') as f:
             f.write(str(added[0][2]))
+        # Finding full path to saved page
         dir_path = os.path.dirname(os.path.realpath(__file__))
+        # Opening map page in browser
         page_url = "file:///" + dir_path + "/map_page.html"
         webbrowser.open(url=page_url, autoraise=True)
 
@@ -78,14 +93,20 @@ class SIBAdapter(KP):
         self.create_subscription(trip, handler)
 
 if __name__ == "__main__":
+    # Creating sib adapter
     sibAdapter = SIBAdapter(config.get("sib", "ip"), config.getint("sib", "port"),
                             config.get("sib", "space_name"), config.get("sib", "namespace"))
+
+    # Joining smart space
     sibAdapter.join_sib()
+
+    # Subscribing instance of PageViewer to map page content change
     sibAdapter.create_map_page_subscription(PageViewer(sibAdapter))
 
     while True:
         line = raw_input('\nType "exit" to exit the program\n')
         if line.lower() == "exit":
-            break
+            exit(0)
 
+    # Leaving sib
     sibAdapter.leave_sib()
