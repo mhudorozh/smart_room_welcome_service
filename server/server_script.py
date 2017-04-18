@@ -346,8 +346,13 @@ class WelcomeBuilder:
         :return: welcome page for user
         """
         page = Page("welcome_page#" + user.uuid, user.uuid, "", WelcomeBuilder.type)
-        # TODO: build map page
-
+						
+			file = open(config.get("html", "users_welcome"), 'r') 
+			text = file.read() 
+            file.close() 
+            text = text.replace("username", user.name+" "+user.patronymic+" "+user.surname)
+			text = text.replace("usercity", user.city)
+		page.content = text
         return page
 
 
